@@ -5,17 +5,16 @@ dotenv.config();
 import express from "express";
 import authRoutes from "./routes/auth.routes.js";
 import cookieParser from 'cookie-parser';
+import balanceRouter from './routes/balance.routes.js'
 
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
 
-app.post("/api/v1/hello", (req, res) => {
-  res.json({ message: "Hello, World!" });
-});
 
 app.use('/api/auth', authRoutes);
+app.use("balance", balanceRouter);
 
 
 

@@ -7,7 +7,8 @@ import authRoutes from "./routes/auth.routes.js";
 import cookieParser from 'cookie-parser';
 import balanceRouter from './routes/balance.routes.js'
 import errorHandler from './middleware/error.middleware.js';
-import tradeRouter from './routes/trade.routes.js'
+import tradeRouter from './routes/trade.routes.js';
+import "./tradeCallback.js"
 
 const app = express();
 

@@ -32,6 +32,9 @@ importers:
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -43,7 +46,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/db
       '@repo/redis':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../packages/redis
       '@repo/typescript-config':
         specifier: workspace:*

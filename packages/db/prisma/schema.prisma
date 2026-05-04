@@ -13,6 +13,7 @@ model User {
   email    String  @unique
   password String
   Asset    Asset[]
+  order    Order[]
 }
 
 model Asset {
@@ -26,7 +27,45 @@ model Asset {
   @@unique([userId, symbol], name: "user_symbol_unique")
 }
 
+model Order {
+  id           String       @id @default(uuid()) @db.Uuid
+  userId       String       @db.Uuid
+  side         Side
+  pnl          Int
+  decimals     Int          @default(4)
+  openingPrice Int
+  closingPrice Int
+  status       OrderStatus
+  qty          Int
+  qtyDecimals  Int          @default(2)
+  leverage     Int          @default(1)
+  takeProfit   Int?
+  stopLoss     Int?
+  margin       Int
+  closeReason  CloseReason?
+  createdAt    DateTime     @default(now())
+  closedAt     DateTime?
+  User         User         @relation(fields: [userId], references: [id])
+}
+
 enum Symbol {
   USDT
   BTC
+}
+
+enum Side {
+  long
+  short
+}
+
+enum OrderStatus {
+  open
+  closed
+}
+
+enum CloseReason {
+  takeProfit
+  StopLoass
+  Manual
+  Liquidation
 }

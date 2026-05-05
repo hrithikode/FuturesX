@@ -44,7 +44,7 @@ export const register = async (req: Request, res: Response) => {
             httpOnly: true,
             sameSite: "none",
             secure: true,
-            maxAge: 60 * 60 * 1000
+            //maxAge: 60 * 60 * 1000
         })
 
         return res.json({

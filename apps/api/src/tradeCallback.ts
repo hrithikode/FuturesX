@@ -48,7 +48,7 @@ export class RedisSubscriber {
             fn(data);
             delete this.callbacks[callbackId!];
           } else {
-            console.log(`No waiter found for id: ${callbackId}`);
+            console.log(`No controller found for id: ${callbackId}`);
           }
         }
       } catch (err) {

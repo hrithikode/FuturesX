@@ -1,6 +1,15 @@
 import { Redis } from "ioredis";
-const host = process.env.REDIS_HOST || "redis"
+const host = process.env.REDIS_HOST || "localhost"
 const port = Number(process.env.REDIS_PORT || 6379)
 export const redis = new Redis(
     { host, port }
+    
 )
+
+redis.on("connect", () => {
+  console.log("Redis connected");
+});
+
+redis.on("error", (err) => {
+  console.log("Redis error:", err);
+});

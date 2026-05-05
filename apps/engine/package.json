@@ -1,0 +1,22 @@
+{
+  "name": "engine",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@repo/redis": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "tsx": "^4.21.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  }
+}

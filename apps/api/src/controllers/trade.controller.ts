@@ -12,15 +12,20 @@ async function getBalance(id: string) {
         },
         select: {
             Asset:{
-                select: {
-                    symbol: true,
-                    balance: true,
-                    decimals: true,
+                where: {
+                    symbol: "USDT"
                 },
+                select: {
+                    balance: true,
+                    decimals:true
+                }
             },
         },
     });
-    return userBalance?.Asset;
+    const asset = userBalance?.Asset?.[0];
+    if(!asset) return 0;
+
+    return asset.balance / Math.pow(10,asset.decimals);
 }
 
 const addtoStream = async (id: string , request:any) => {
@@ -28,10 +33,7 @@ const addtoStream = async (id: string , request:any) => {
         "engine-stream",
         "*",
         "data",
-        JSON.stringify({
-            id,
-            request
-        })
+        JSON.stringify(request)
     );
 }
 
@@ -85,6 +87,7 @@ export const createOrder = async (req: Request, res: Response ) => {
         const payload = {
             kind: "create-order",
             payload: {
+                asset,
                 orderId,
                 userId,
                 side,
@@ -97,7 +100,7 @@ export const createOrder = async (req: Request, res: Response ) => {
                 enqueuedAt: Date.now(),
             }
             };
-
+            console.log("Waiting for callback ID:", orderId);
             const [ , callback] = await sendRequestAndWait(orderId, payload);
             
             if (callback.status === "insufficient_balance") {
@@ -127,9 +130,12 @@ export const createOrder = async (req: Request, res: Response ) => {
                 message: `Order was not created. Status: ${callback.status}`
             });
             }
+            console.log("reached here");
             return res.json({ message: "order created", orderId: orderId})
+            
                     
             } catch (error) {
+                console.error("Create order error:", error);
                 return res.status(500).json({
                     error: "Internal server error"
                 });

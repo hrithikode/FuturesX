@@ -2,33 +2,30 @@ import { randomUUID } from "crypto";
 import { CloseOrderBodySchema, CreateOrderBodySchema } from "../schema/trade.types.js";
 import { Request, Response, } from "express";
 import { prisma } from "@repo/prisma";
-import { RedisSubscriber } from "../tradeCallback.js";
 import { redis } from "@repo/redis";
+import { subscriber } from "../subscriber.js";
 
-async function getBalance(id: string) {
-    const userBalance = await prisma.user.findUnique({
+async function getBalance(userId: string) {
+    const userBalance = await prisma.asset.findUnique({
         where: {
-            id,
+            user_symbol_unique: {
+                userId,
+                symbol: "USDT"
+            }
         },
         select: {
-            Asset:{
-                where: {
-                    symbol: "USDT"
-                },
-                select: {
-                    balance: true,
-                    decimals:true
-                }
-            },
+            id: true,
+            symbol: true,
+            balance: true,
+            decimals:true
+                
         },
+        
     });
-    const asset = userBalance?.Asset?.[0];
-    if(!asset) return 0;
-
-    return asset.balance / Math.pow(10,asset.decimals);
+    return userBalance;
 }
 
-const addtoStream = async (id: string , request:any) => {
+const addtoStream = async ( request:any) => {
     await redis.xadd(
         "engine-stream",
         "*",
@@ -37,15 +34,15 @@ const addtoStream = async (id: string , request:any) => {
     );
 }
 
-const subscriber = new RedisSubscriber();
 
-async function sendRequestAndWait(id: string, request:any ) {
+async function sendRequestAndWait(orderId: string, request:any ) {
     try{
-        const result = await Promise.all([
-            addtoStream(id, request),
-            subscriber.waitForMessage(id)
-        ])
-        return result;
+        const waitPromise =
+        subscriber.waitForMessage(orderId);
+
+        await addtoStream(request);
+
+        return await waitPromise;
 
     } catch(error) {
         throw error;
@@ -71,37 +68,31 @@ export const createOrder = async (req: Request, res: Response ) => {
         }
 
         const {
-            asset,
+            symbol,
             side,
-            status = "open",
             qty,
-            leverage,
-            takeProfit,
-            stopLoss,
+            leverage
         } = result.data;
     
         const orderId = randomUUID();
 
-        const userBalance = await getBalance(userId);
+        const balanceSnapshot = await getBalance(userId);
 
         const payload = {
-            kind: "create-order",
+            action: "create-order",
             payload: {
-                asset,
                 orderId,
                 userId,
+                symbol,
                 side,
-                status,
                 qty: Number(qty),
                 leverage: Number(leverage),
-                takeProfit: takeProfit != null ? Number(takeProfit) : null,
-                stopLoss: stopLoss != null ? Number(stopLoss) : null,
-                balanceSnapshot: userBalance,
+                balanceSnapshot,
                 enqueuedAt: Date.now(),
             }
             };
             console.log("Waiting for callback ID:", orderId);
-            const [ , callback] = await sendRequestAndWait(orderId, payload);
+            const callback = await sendRequestAndWait(orderId, payload);
             
             if (callback.status === "insufficient_balance") {
                 return res.status(400).json({ 
@@ -144,58 +135,97 @@ export const createOrder = async (req: Request, res: Response ) => {
 
 
 export const closeOrder = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.id;
-        if(!userId) {
-            return res.status(401).json({
-                error: "user not found"
-            })
-        }
-        const { orderId } = req.params;
-        if (!orderId) {
-            return res.status(400).json({ error: "orderId is required" });
-        }
-        const result = CloseOrderBodySchema.safeParse(req.body);
+  try {
+    const userId = req.user?.id;
 
-        if(!result.success) {
-            return res.status(400).json({error: result.error.message })
-        }
-
-        const {pnl, closeReason = 'Manual'} = result.data;
-
-        if(!closeReason) {
-            return res.status(400).json({
-                error: 'closeReason is required. Must be one of: TakeProfit, StopLoss, Manual, Liquidation'
-            })
-        }
-        const existingOrder = await prisma.order.findFirst({
-            where: {
-                id: String(orderId),
-                userId,
-                status: "open"
-            },
-        });
-
-        if (!existingOrder) {
-            return res.status(404).json({error: "order not found or already closed"})
-        }
-
-        const payload = {
-            kind: "close-order",
-            payload: {
-                orderId,
-                userId,
-                closeReason,
-                pnl: pnl ? Number(pnl) : undefined,
-                closedAt: Date.now(),
-            },
-        };
-
-        await sendRequestAndWait(String(orderId), payload);
-    } catch (e) {
-        res.status(500).json({error: "internal server error"})
+    if (!userId) {
+      return res.status(401).json({
+        error: "User not found"
+      });
     }
-}
+    const result = CloseOrderBodySchema.safeParse(req.params.orderId);
+    if(!result.success) {
+        return res.status(400).json({
+            error: result.error.message
+        })
+    }
+    const { orderId } = result.data;
+    
+    if (!orderId) {
+      return res.status(400).json({
+        error: "Order ID is required"
+      });
+    }
+
+    const existingOrder =
+      await prisma.order.findUnique({
+        where: {
+          id: orderId
+        }
+      });
+
+    if (!existingOrder) {
+      return res.status(404).json({
+        error: "Order not found"
+      });
+    }
+
+    if (
+      existingOrder.userId !== userId
+    ) {
+      return res.status(403).json({
+        error: "Unauthorized"
+      });
+    }
+
+    if (
+      existingOrder.status !== "open"
+    ) {
+      return res.status(400).json({
+        error: "Order already closed"
+      });
+    }
+
+    const payload = {
+      action: "close-order",
+      payload: {
+        orderId,
+        userId,
+        symbol: existingOrder.symbol,
+        side: existingOrder.side
+      }
+    };
+
+    const callback =
+      await sendRequestAndWait(
+        orderId,
+        payload
+      );
+
+    if (
+      callback.status !== "closed"
+    ) {
+      return res.status(400).json({
+        error: "Close order failed"
+      });
+    }
+
+    return res.json({
+      message:
+        "Order closed successfully"
+    });
+  } catch (error) {
+    console.error(
+      "Close order error:",
+      error
+    );
+
+    return res.status(500).json({
+      error:
+        "Internal server error"
+    });
+  }
+};
 
 export const getOrders = async (req: Request , res:Response ) => {
     //take user & check it
@@ -238,7 +268,7 @@ export const getOrders = async (req: Request , res:Response ) => {
     }
 }
 
-export const getOrderById = async (req: Request , res:Response) => {
+/*export const getOrderById = async (req: Request , res:Response) => {
     //take user from middleware and check it
     //orderId from params and make a query to db for orderbyid
     //transform the orderById
@@ -287,4 +317,4 @@ export const getOrderById = async (req: Request , res:Response) => {
         return res.status(401).json()
     }
 
-}
+}*/

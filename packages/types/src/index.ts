@@ -53,35 +53,4 @@ export interface CancelOrderMessage {
     }
 }
 
-export type EngineMessage = CreateOrderMessage | CancelOrderMessage;
 
-
-export interface TradeExecutedEvent {
-    type: 'TRADE_EXECUTED';
-    data: {
-        tradeId: string;
-        market: string;
-        price: number;
-        quantity: number;
-        makerOrderId: string;
-        takerOrderId: string;
-        timestamp: number;
-    }
-}
-
-export interface OrderUpdateEvent {
-    type: 'ORDER_UPDATE';
-    data: {
-        orderId: string;
-        userId: string;
-        market: string;
-        status: OrderStatus;
-        filledQuantity: number;
-    }
-}
-
-export interface PriceData {
-  s: string; // symbol
-  b: string; // bid price
-  a: string; // ask price
-}

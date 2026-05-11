@@ -3,21 +3,25 @@ dotenv.config();
 
 
 import express from "express";
+import cors from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import cookieParser from 'cookie-parser';
-import balanceRouter from './routes/balance.routes.js'
+//import balanceRouter from './routes/balance.routes.js'
 import errorHandler from './middleware/error.middleware.js';
 import tradeRouter from './routes/trade.routes.js';
-import "./tradeCallback.js"
 
 const app = express();
 
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true,
+}))
 app.use(express.json());
 app.use(cookieParser());
 
 
 app.use('/api/auth', authRoutes);
-app.use("/balance", balanceRouter);
+//app.use("/balance", balanceRouter);
 app.use('/trade', tradeRouter);
 
 

@@ -1,96 +1,61 @@
-import dotenv from "dotenv"
-dotenv.config();
-
-
-import { redis } from "@repo/redis"
-const client = redis.duplicate();
+import { redis } from "@repo/redis";
+import { createOrder } from "./handlers/createOrder.js";
 
 const ENGINE_STREAM = "engine-stream";
 
-async function runEngine () {
-    //check redis stream
-    console.log("engine started");
-    while(true) {
-        const checkStream = await client.xread(
-            "BLOCK",
-            0,
-            "STREAMS",
-            ENGINE_STREAM,
-            "$"
-        );
-        console.log(JSON.stringify(checkStream, null, 2));
+const engineRedis = redis.duplicate();
 
-        if (!checkStream) {
-            continue
+async function startEngine() {
+  console.log("Engine started...");
+
+  while (true) {
+    try {
+      const response = await engineRedis.xread(
+        "BLOCK",
+        0,
+        "STREAMS",
+        ENGINE_STREAM,
+        "$"
+      );
+
+      if (!response || response.length === 0) continue;
+
+      const [, messages] = response[0]!;
+
+      if (!messages || messages.length === 0) continue;
+
+      for (const [id, rawFields] of messages) {
+        const fields = rawFields as string[];
+
+        const data: Record<string, string> = {};
+
+        for (let i = 0; i < fields.length; i += 2) {
+          const key = fields[i];
+          const value = fields[i + 1];
+
+          if (key && value) {
+            data[key] = value;
+          }
         }
 
-        const [, message] = checkStream[0]!;
-        
-        if(!message) {
-            continue
+        if (!data.data) {
+          console.log("Invalid message");
+          continue;
         }
 
-        for(const [streamId, rawFields] of message) {
-            console.log(streamId);
-            console.log(rawFields);
+        const parsedMessage = JSON.parse(data.data);
 
-            const raw = rawFields[1];
+        console.log("Received from engine-stream:", parsedMessage);
 
-            if (!raw) {
-                continue;
-            }
-            const parsedMessage = JSON.parse((raw))
-            console.log("this is the parse message: ",  JSON.stringify(parsedMessage, null, 2))
-
-            if(parsedMessage.kind === "create-order") {
-                console.log("create order received")
-                console.log(parsedMessage.payload);
-
-                const {
-                    orderId,
-                    userId,
-                    asset,
-                    side,
-                    qty,
-                    leverage,
-                    takeProfit,
-                    stopLoss,
-                    balanceSnapshot
-                } = parsedMessage.payload;
-                console.log("Sending callback for ID:", orderId);
-                
-                const currentPrice = 50000;
-                   
-                const requiredMargin = (qty * currentPrice) /leverage; 
-                console.log(requiredMargin);
-                
-                if(balanceSnapshot < requiredMargin) {
-                    await redis.xadd(
-                        "callback-queue",
-                        "*",
-                        "id",
-                        orderId,
-                        "status",
-                        "insufficient_balance"
-                    );
-                    console.log("insufficient balance callback");
-                    continue;
-                }
-
-                await redis.xadd(
-                    "callback-queue",
-                    "*",
-                    "id",
-                    orderId,
-                    "status",
-                    "created"
-                );
-                console.log("success callback sent");
-                
-            }
+        if (parsedMessage.action === "create-order") {
+          await createOrder(parsedMessage.payload);
         }
-
+      }
+    } catch (error) {
+      console.error("Engine Error:", error);
     }
-    
+  }
 }
-runEngine();
+
+startEngine();
+

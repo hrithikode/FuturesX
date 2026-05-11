@@ -59,7 +59,7 @@ export class RedisSubscriber {
 
   waitForMessage(callbackId: string) {
     return new Promise<Record<string, string>>((resolve, reject) => {
-      console.log("Waiting for callback id");
+      console.log("Waiting for callback id", callbackId);
 
       const timer = setTimeout(() => {
         if (this.callbacks[callbackId]) {

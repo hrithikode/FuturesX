@@ -17,12 +17,12 @@ model User {
 }
 
 model Asset {
-  id       Int    @id @default(autoincrement())
-  symbol   Symbol
+  id       Int         @id @default(autoincrement())
+  symbol   AssetSymbol
   balance  Int
-  decimals Int    @default(2)
-  userId   String @db.Uuid
-  user     User   @relation(fields: [userId], references: [id])
+  decimals Int         @default(2)
+  userId   String      @db.Uuid
+  user     User        @relation(fields: [userId], references: [id])
 
   @@unique([userId, symbol], name: "user_symbol_unique")
 }
@@ -45,8 +45,9 @@ model Order {
 }
 
 enum Symbol {
-  USDT
-  BTC
+  BTCUSDT
+  ETHUSDT
+  SOLUSDT
 }
 
 enum Side {
@@ -57,4 +58,8 @@ enum Side {
 enum OrderStatus {
   open
   closed
+}
+
+enum AssetSymbol {
+  USDT
 }

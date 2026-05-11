@@ -26,6 +26,7 @@ export const register = async (req: Request, res: Response) => {
         })
 
         if(existingUser) {
+            console.log("user exist")
             return res.status(409).json({error: "User already exist"})
         }
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -34,7 +35,15 @@ export const register = async (req: Request, res: Response) => {
             data: {
                 name,
                 email, 
-                password:hashedPassword
+                password:hashedPassword,
+
+                Asset: {
+                    create: {
+                        symbol: "USDT",
+                        balance: 500000,
+                        decimals: 2
+                    }
+                }
             },
         });
         
@@ -42,8 +51,8 @@ export const register = async (req: Request, res: Response) => {
        
         res.cookie("token", token, {
             httpOnly: true,
-            sameSite: "none",
-            secure: true,
+            sameSite: "lax",
+            secure: false,
             //maxAge: 60 * 60 * 1000
         })
 
@@ -98,8 +107,8 @@ export const login = async (req: Request, res: Response) => {
 
         res.cookie("token", token, {
             httpOnly: true,
-            sameSite: "none",
-            secure: true,
+            sameSite: "lax",
+            secure: false,
             maxAge: 60 * 60 * 1000
         });
 
@@ -120,8 +129,8 @@ export const logout = async (req: Request, res: Response) => {
     try{
         res.clearCookie("token", {
             httpOnly: true,
-            sameSite: "none",
-            secure: true
+            sameSite: "lax",
+            secure: false
         });
         return res.json({ message: "logout successfully" });
     } catch (error) {

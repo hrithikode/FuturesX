@@ -46,7 +46,25 @@ export async function createOrder(
       Later:
       Redis live price feed
     */
-    const openingPrice = 60000;
+    const price =
+  await redis.get(
+    `price:${symbol}`
+  );
+
+if (!price) {
+  await redis.xadd(
+    CALLBACK_QUEUE,
+    "*",
+    "id",
+    orderId,
+    "status",
+    "no_price"
+  );
+  return;
+}
+
+const openingPrice =
+  Number(price);
 
     /*
       STEP 2

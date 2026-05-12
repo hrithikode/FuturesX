@@ -212,7 +212,9 @@ export const closeOrder = async (req: Request, res: Response) => {
 
     return res.json({
       message:
-        "Order closed successfully"
+        "Order closed successfully",
+        pnl: callback.pnl,
+        settlement: callback.settlement
     });
   } catch (error) {
     console.error(
@@ -240,8 +242,7 @@ export const getOrders = async (req: Request , res:Response ) => {
     const orders =
       await prisma.order.findMany({
         where: {
-          userId,
-          status: "open"
+          userId
         },
         orderBy: {
           createdAt: "desc"
@@ -252,6 +253,8 @@ export const getOrders = async (req: Request , res:Response ) => {
             side: true,
             leverage: true,
             qty: true,
+            pnl: true,
+            status: true,
             qtyDecimals: true,
             openingPrice: true,
             priceDecimals: true,
@@ -260,8 +263,21 @@ export const getOrders = async (req: Request , res:Response ) => {
         }
       });
 
+    const openOrders =
+      orders.filter(
+        (order) =>
+          order.status === "open"
+      );
+
+    const closedOrders =
+      orders.filter(
+        (order) =>
+          order.status === "closed"
+      );
+
     return res.json({
-      orders
+      openOrders,
+      closedOrders
     });
   } catch (error) {
     console.error(
@@ -275,54 +291,3 @@ export const getOrders = async (req: Request , res:Response ) => {
     });
   }
 };
-
-/*export const getOrderById = async (req: Request , res:Response) => {
-    //take user from middleware and check it
-    //orderId from params and make a query to db for orderbyid
-    //transform the orderById
-    //return the transformed order
-   try{
-        const userId = req.user?.id;
-        if (!userId) {
-            return res.status(401).json({ error: "user not found"})
-        }
-
-        const { orderId } = req.params;
-
-        if (!orderId) {
-            return res.status(400).json({error: "orderId is required"})
-        }
-
-        const order = await prisma.order.findFirst({
-            where: {
-                id: String(orderId),
-                userId,
-            }
-        })
-        if(!order) {
-            return res.status(404).json({ error: "order not found"})
-        }
-
-        const transformedOrder = {
-            id: order.id,
-            symbol: "BTC",
-            orderType: order.side === "long" ? "long" : "short",
-            quantity: order.qty / 100,
-            price: order.openingPrice / 10000,
-            status: order.status,
-            pnl: order.pnl / 10000,
-            createdAt: order.createdAt.toISOString(),
-            closedAt: order.closedAt?.toISOString(),
-            exitPrice: order.closingPrice ? order.closingPrice / 10000 : undefined,
-            leverage: order.leverage,
-            takeProfit: order.takeProfit ? order.takeProfit / 10000 : undefined,
-            stopLoss: order.stopLoss ? order.stopLoss / 10000 : undefined,
-            closeReason: order.closeReason,
-        };
-
-    return res.json({ order: transformedOrder });
-    } catch (e) {
-        return res.status(401).json()
-    }
-
-}*/

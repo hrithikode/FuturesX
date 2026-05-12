@@ -37,6 +37,7 @@ model Order {
   openingPrice  Int
   priceDecimals Int         @default(4)
   margin        Int
+  pnl           Int?
   status        OrderStatus
   leverage      Int         @default(1)
   createdAt     DateTime    @default(now())

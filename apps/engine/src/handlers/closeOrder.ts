@@ -44,7 +44,24 @@ export async function closeOrder(
       Hardcoded live market price
       later from Redis
     */
-    const closingPrice = 65000;
+    const livePrice = await redis.get(
+  `price:${existingOrder.symbol}`
+);
+
+if (!livePrice) {
+  await redis.xadd(
+    CALLBACK_QUEUE,
+    "*",
+    "id",
+    orderId,
+    "status",
+    "no_price"
+  );
+  return;
+}
+
+const closingPrice =
+  Number(livePrice);
 
     /*
       Convert stored values
@@ -62,7 +79,7 @@ export async function closeOrder(
         10,
         existingOrder.priceDecimals
       );
-
+      console.log("opening peice", openingPrice)
     const margin =
       existingOrder.margin / 100;
 
@@ -82,22 +99,28 @@ export async function closeOrder(
         (openingPrice -
           closingPrice) * qty;
     }
+    pnl = Number(pnl.toFixed(2));
 
+    console.log("closing Price", closingPrice)
     const finalSettlement =
-      margin + pnl;
-
+      Number((margin + pnl).toFixed(2));
+    console.log("pnl" , pnl);
+    console.log("final settlement", finalSettlement)
+    console.log(
+  "Before closing order update:",
+  orderId
+);
     await prisma.$transaction(
       async (tx) => {
-        /*
-          Close order
-        */
+
         await tx.order.update({
           where: {
             id: orderId
           },
           data: {
             status: "closed",
-            closedAt: new Date()
+            closedAt: new Date(),
+            pnl: Math.floor(pnl * 100 )
           }
         });
 
@@ -129,7 +152,11 @@ export async function closeOrder(
       "id",
       orderId,
       "status",
-      "closed"
+      "closed",
+      "pnl",
+      String(pnl),
+      "settlement",
+      String(finalSettlement)
     );
   } catch (error) {
     console.error(

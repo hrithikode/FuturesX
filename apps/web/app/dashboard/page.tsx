@@ -11,13 +11,21 @@ type Order = {
   leverage: number;
   qty: number;
   qtyDecimals: number;
+
+  status: "open" | "closed";
+  pnl?: number | null;
+  closedAt?: string | null;
 };
 
 export default function Dashboard() {
   const [quantity, setQuantity] = useState("");
   const [leverage, setLeverage] = useState(1);
-  const [orders, setOrders] = useState<Order[]>([])
   const [balance, setBalance] = useState(0);
+  const [openOrders, setOpenOrders] =
+  useState<Order[]>([]);
+
+const [closedOrders, setClosedOrders] =
+  useState<Order[]>([]);
 
   // temporary frontend display price
   // later this will come from poller service
@@ -39,13 +47,16 @@ export default function Dashboard() {
     const fetchOrders = async () => {
     try {
         const response =
-        await api.get<{orders: Order[]}>(
+        await api.get(
             "/trade/orders"
         );
 
-        setOrders(
-        response.data.orders
+        setOpenOrders(
+        response.data.openOrders
         );
+        setClosedOrders(
+          response.data.closedOrders
+        )
     } catch (error) {
         console.error(error);
     }
@@ -207,7 +218,7 @@ const handleCloseOrder = async (
     Open Orders
   </h2>
 
-  {orders.map((order) => (
+  {openOrders.map((order) => (
     <div
       key={order.id}
       className="bg-zinc-800 rounded-xl p-4 flex items-center justify-between"
@@ -251,6 +262,45 @@ const handleCloseOrder = async (
     Close
   </button>
 </div>
+    </div>
+  ))}
+</div>
+
+<div className="mt-8 space-y-4">
+  <h2 className="text-xl font-semibold">
+    Order History
+  </h2>
+
+  {closedOrders.map((order) => (
+    <div
+      key={order.id}
+      className="bg-zinc-800 rounded-xl p-4 flex items-center justify-between"
+    >
+      <div>
+        <p
+          className={`font-semibold ${
+            order.side === "long"
+              ? "text-green-500"
+              : "text-red-500"
+          }`}
+        >
+          {String(order.side).toUpperCase()}
+        </p>
+
+        <p className="text-sm text-zinc-400">
+          {order.symbol}
+        </p>
+      </div>
+
+      <div className="text-right">
+        <p className="font-bold">
+          PnL: {(order.pnl || 0) / 100} USDT
+        </p>
+
+        <p className="text-sm text-zinc-400">
+          Closed
+        </p>
+      </div>
     </div>
   ))}
 </div>

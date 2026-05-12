@@ -6,7 +6,7 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import cookieParser from 'cookie-parser';
-//import balanceRouter from './routes/balance.routes.js'
+import balanceRouter from './routes/balance.routes.js'
 import errorHandler from './middleware/error.middleware.js';
 import tradeRouter from './routes/trade.routes.js';
 
@@ -21,7 +21,7 @@ app.use(cookieParser());
 
 
 app.use('/api/auth', authRoutes);
-//app.use("/balance", balanceRouter);
+app.use("/balance", balanceRouter);
 app.use('/trade', tradeRouter);
 
 

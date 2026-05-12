@@ -143,14 +143,14 @@ export const closeOrder = async (req: Request, res: Response) => {
         error: "User not found"
       });
     }
-    const result = CloseOrderBodySchema.safeParse(req.params.orderId);
+    const result = CloseOrderBodySchema.safeParse({orderId: req.params.orderId});
     if(!result.success) {
         return res.status(400).json({
             error: result.error.message
         })
     }
     const { orderId } = result.data;
-    
+
     if (!orderId) {
       return res.status(400).json({
         error: "Order ID is required"
@@ -228,45 +228,53 @@ export const closeOrder = async (req: Request, res: Response) => {
 };
 
 export const getOrders = async (req: Request , res:Response ) => {
-    //take user & check it
-    //make a query to db
-    //tranform the query result & return
-   try{
+    try {
     const userId = req.user?.id;
+
     if (!userId) {
-        return res.status(401).json({error: "user not found"});
-        
+      return res.status(401).json({
+        error: "User not found"
+      });
     }
-    const orders = await prisma.order.findMany({
+
+    const orders =
+      await prisma.order.findMany({
         where: {
-            userId
+          userId,
+          status: "open"
         },
         orderBy: {
-            createdAt: "desc"
+          createdAt: "desc"
         },
-    });
+        select: {
+            id: true,
+            symbol: true,
+            side: true,
+            leverage: true,
+            qty: true,
+            qtyDecimals: true,
+            openingPrice: true,
+            priceDecimals: true,
+            margin: true,
+            createdAt: true
+        }
+      });
 
-    const transformedOrders = orders.map((order: any) => ({
-        id: order.id,
-        symbol: "BTC",
-        orderType: order.side === "long" ? "long" : "short",
-        quantity: order.qty / 100,
-        price: order.openingPrice / 10000,
-        status: order.status,
-        pnl: order.pnl / 10000,
-        createdAt: order.createdAt.toISOString(),
-        closedAt: order.closedAt?.toISOString(),
-        exitPrice: order.closingPrice ? order.closingPrice / 10000 : undefined,
-        leverage: order.leverage,
-        takeProfit: order.takeProfit ? order.takeProfit / 10000 : undefined,
-        stopLoss: order.stopLoss ? order.stopLoss / 10000 : undefined,
-        closeReason: order.closeReason,
-    }));
-    return res.json({ orders: transformedOrders })
-    } catch (error) {
-        return res.status(500).json({erro: "Internal server error"})
-    }
-}
+    return res.json({
+      orders
+    });
+  } catch (error) {
+    console.error(
+      "Get orders error:",
+      error
+    );
+
+    return res.status(500).json({
+      error:
+        "Internal server error"
+    });
+  }
+};
 
 /*export const getOrderById = async (req: Request , res:Response) => {
     //take user from middleware and check it

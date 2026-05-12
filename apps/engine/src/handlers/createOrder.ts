@@ -152,10 +152,7 @@ export async function createOrder(
             status: "open",
           },
         });
-        console.log(
-  "ORDER CREATED IN DB:",
-  orderId
-);
+        
         /*
           Deduct margin
         */

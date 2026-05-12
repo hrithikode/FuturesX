@@ -6,7 +6,6 @@ const router: Router = Router();
 
 router.post('/create', authenticate, createOrder);
 router.post("/close/:orderId", authenticate, closeOrder);
-router.get("/orders", getOrders);
-//router.get("/orders/:orderId", getOrderById);
+router.get("/orders",authenticate, getOrders);
 
 export default router;

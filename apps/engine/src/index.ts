@@ -1,5 +1,6 @@
 import { redis } from "@repo/redis";
 import { createOrder } from "./handlers/createOrder.js";
+import { closeOrder } from "./handlers/closeOrder.js";
 
 const ENGINE_STREAM = "engine-stream";
 
@@ -49,6 +50,9 @@ async function startEngine() {
 
         if (parsedMessage.action === "create-order") {
           await createOrder(parsedMessage.payload);
+        }
+        if (parsedMessage.action === "close-order") {
+          await closeOrder(parsedMessage.payload);
         }
       }
     } catch (error) {

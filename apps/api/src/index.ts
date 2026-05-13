@@ -9,7 +9,6 @@ import cookieParser from 'cookie-parser';
 import balanceRouter from './routes/balance.routes.js'
 import errorHandler from './middleware/error.middleware.js';
 import tradeRouter from './routes/trade.routes.js';
-import "./ws.js";
 
 const app = express();
 
@@ -17,6 +16,7 @@ app.use(cors({
   origin: "http://localhost:3000",
   credentials: true,
 }))
+
 app.use(express.json());
 app.use(cookieParser());
 

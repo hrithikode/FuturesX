@@ -1,34 +1,24 @@
 import { prisma } from "@repo/prisma";
 import { redis } from "@repo/redis";
 
-const CALLBACK_QUEUE =
-  "callback-queue";
+const CALLBACK_QUEUE = "callback-queue";
 
 type CloseOrderPayload = {
   orderId: string;
   userId: string;
 };
 
-export async function closeOrder(
-  payload: CloseOrderPayload
-) {
+export async function closeOrder( payload: CloseOrderPayload) {
   try {
-    const {
-      orderId,
-      userId
-    } = payload;
+    const { orderId, userId } = payload;
 
-    const existingOrder =
-      await prisma.order.findUnique({
+    const existingOrder = await prisma.order.findUnique({
         where: {
           id: orderId
         }
-      });
+    });
 
-    if (
-      !existingOrder ||
-      existingOrder.status !== "open"
-    ) {
+    if ( !existingOrder || existingOrder.status !== "open") {
       await redis.xadd(
         CALLBACK_QUEUE,
         "*",
@@ -40,79 +30,48 @@ export async function closeOrder(
       return;
     }
 
-    /*
-      Hardcoded live market price
-      later from Redis
-    */
-    const livePrice = await redis.get(
-  `price:${existingOrder.symbol}`
-);
-
-if (!livePrice) {
-  await redis.xadd(
-    CALLBACK_QUEUE,
-    "*",
-    "id",
-    orderId,
-    "status",
-    "no_price"
+  const livePrice = await redis.get(
+    `price:${existingOrder.symbol}`
   );
-  return;
-}
 
-const closingPrice =
-  Number(livePrice);
+  if (!livePrice) {
+    await redis.xadd(
+      CALLBACK_QUEUE,
+      "*",
+      "id",
+      orderId,
+      "status",
+      "no_price"
+    );
+    return;
+  }
 
-    /*
-      Convert stored values
-    */
-    const qty =
-      existingOrder.qty /
-      Math.pow(
-        10,
-        existingOrder.qtyDecimals
-      );
+  const closingPrice = Number(livePrice);
 
-    const openingPrice =
-      existingOrder.openingPrice /
-      Math.pow(
-        10,
-        existingOrder.priceDecimals
-      );
-      console.log("opening peice", openingPrice)
-    const margin =
-      existingOrder.margin / 100;
+  const qty = existingOrder.qty / Math.pow( 10, existingOrder.qtyDecimals);
 
-    /*
-      PnL calculation
-    */
-    let pnl = 0;
+  const openingPrice = existingOrder.openingPrice / Math.pow( 10, existingOrder.priceDecimals);
+  
+  console.log("opening peice", openingPrice)
+  
+  const margin = existingOrder.margin / 100;
 
-    if (
-      existingOrder.side === "long"
-    ) {
-      pnl =
-        (closingPrice -
-          openingPrice) * qty;
+  let pnl = 0;
+
+    if (existingOrder.side === "long") {
+      pnl = (closingPrice - openingPrice) * qty;
     } else {
-      pnl =
-        (openingPrice -
-          closingPrice) * qty;
+      pnl = (openingPrice - closingPrice) * qty;
     }
     pnl = Number(pnl.toFixed(2));
-
     console.log("closing Price", closingPrice)
-    const finalSettlement =
-      Number((margin + pnl).toFixed(2));
+
+    const finalSettlement = Number((margin + pnl).toFixed(2));
     console.log("pnl" , pnl);
     console.log("final settlement", finalSettlement)
-    console.log(
-  "Before closing order update:",
-  orderId
-);
-    await prisma.$transaction(
-      async (tx) => {
 
+    console.log("Before closing order update:", orderId);
+    await prisma.$transaction( async (tx) => {
         await tx.order.update({
           where: {
             id: orderId
@@ -124,9 +83,6 @@ const closingPrice =
           }
         });
 
-        /*
-          Return funds
-        */
         await tx.asset.update({
           where: {
             user_symbol_unique: {
@@ -159,10 +115,7 @@ const closingPrice =
       String(finalSettlement)
     );
   } catch (error) {
-    console.error(
-      "Close order engine error:",
-      error
-    );
+    console.error( "Close order engine error:", error);
 
     await redis.xadd(
       CALLBACK_QUEUE,

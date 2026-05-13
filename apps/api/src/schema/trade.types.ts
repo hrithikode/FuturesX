@@ -7,10 +7,8 @@ export const CreateOrderBodySchema = z.object({
     leverage: z.coerce.number(),
 });
 
-export type CreateOrderBodyType = z.infer<typeof CreateOrderBodySchema>;
 
 export const CloseOrderBodySchema = z.object({
     orderId: z.string().uuid()
 });
 
-export type CloseOrderBody = z.infer<typeof CloseOrderBodySchema>;

@@ -12,16 +12,14 @@ async function getBalance(userId: string) {
                 userId,
                 symbol: "USDT"
             }
-        },
-        select: {
-            id: true,
-            symbol: true,
-            balance: true,
-            decimals:true
-                
-        },
-        
-    });
+          },
+            select: {
+                id: true,
+                symbol: true,
+                balance: true,
+                decimals:true
+            },
+      });
     return userBalance;
 }
 
@@ -92,6 +90,7 @@ export const createOrder = async (req: Request, res: Response ) => {
             }
             };
             console.log("Waiting for callback ID:", orderId);
+
             const callback = await sendRequestAndWait(orderId, payload);
             
             if (callback.status === "insufficient_balance") {
@@ -144,11 +143,13 @@ export const closeOrder = async (req: Request, res: Response) => {
       });
     }
     const result = CloseOrderBodySchema.safeParse({orderId: req.params.orderId});
+
     if(!result.success) {
         return res.status(400).json({
             error: result.error.message
         })
     }
+
     const { orderId } = result.data;
 
     if (!orderId) {
@@ -170,17 +171,13 @@ export const closeOrder = async (req: Request, res: Response) => {
       });
     }
 
-    if (
-      existingOrder.userId !== userId
-    ) {
+    if (existingOrder.userId !== userId) {
       return res.status(403).json({
         error: "Unauthorized"
       });
     }
 
-    if (
-      existingOrder.status !== "open"
-    ) {
+    if (existingOrder.status !== "open") {
       return res.status(400).json({
         error: "Order already closed"
       });
@@ -196,15 +193,9 @@ export const closeOrder = async (req: Request, res: Response) => {
       }
     };
 
-    const callback =
-      await sendRequestAndWait(
-        orderId,
-        payload
-      );
+    const callback = await sendRequestAndWait(orderId, payload);
 
-    if (
-      callback.status !== "closed"
-    ) {
+    if ( callback.status !== "closed") {
       return res.status(400).json({
         error: "Close order failed"
       });
@@ -213,18 +204,14 @@ export const closeOrder = async (req: Request, res: Response) => {
     return res.json({
       message:
         "Order closed successfully",
-        pnl: callback.pnl,
-        settlement: callback.settlement
+          pnl: callback.pnl,
+          settlement: callback.settlement
     });
   } catch (error) {
-    console.error(
-      "Close order error:",
-      error
-    );
+    console.error("Close order error:", error);
 
     return res.status(500).json({
-      error:
-        "Internal server error"
+      error: "Internal server error"
     });
   }
 };
@@ -263,31 +250,20 @@ export const getOrders = async (req: Request , res:Response ) => {
         }
       });
 
-    const openOrders =
-      orders.filter(
-        (order) =>
-          order.status === "open"
-      );
+    const openOrders = orders.filter((order) => order.status === "open");
 
-    const closedOrders =
-      orders.filter(
-        (order) =>
-          order.status === "closed"
-      );
+    const closedOrders = orders.filter((order) => order.status === "closed");
 
     return res.json({
       openOrders,
       closedOrders
     });
+
   } catch (error) {
-    console.error(
-      "Get orders error:",
-      error
-    );
+    console.error("Get orders error:", error);
 
     return res.status(500).json({
-      error:
-        "Internal server error"
+      error: "Internal server error"
     });
   }
 };

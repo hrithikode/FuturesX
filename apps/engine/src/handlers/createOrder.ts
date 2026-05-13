@@ -16,18 +16,12 @@ type CreateOrderPayload = {
     balance: number;
     decimals: number;
   }| null;
-
   enqueuedAt: number;
 };
 
-export async function createOrder(
-  payload: CreateOrderPayload
-) {
+export async function createOrder( payload: CreateOrderPayload) {
   try {
-    console.log(
-      "Processing create-order:",
-      payload.orderId
-    );
+    console.log( "Processing create-order:", payload.orderId );
 
     const {
       orderId,
@@ -39,49 +33,27 @@ export async function createOrder(
       balanceSnapshot,
     } = payload;
 
-    /*
-      STEP 1
-      Hardcoded live market price for MVP
+    const price = await redis.get(
+      `price:${symbol}`
+    );
 
-      Later:
-      Redis live price feed
-    */
-    const price =
-  await redis.get(
-    `price:${symbol}`
-  );
+  if (!price) {
+    await redis.xadd(
+      CALLBACK_QUEUE,
+      "*",
+      "id",
+      orderId,
+      "status",
+      "no_price"
+    );
+    return;
+  }
 
-if (!price) {
-  await redis.xadd(
-    CALLBACK_QUEUE,
-    "*",
-    "id",
-    orderId,
-    "status",
-    "no_price"
-  );
-  return;
-}
+  const openingPrice = Number(price);
 
-const openingPrice =
-  Number(price);
+  const requiredMargin = (openingPrice * qty) / leverage;
 
-    /*
-      STEP 2
-      Required Margin
-
-      Formula:
-      (price × qty) / leverage
-    */
-    const requiredMargin =
-      (openingPrice * qty) / leverage;
-
-    /*
-      STEP 3
-      Get USDT wallet
-    */
-    const usdtAsset =
-      balanceSnapshot;
+    const usdtAsset = balanceSnapshot;
 
     if (!usdtAsset) {
       await redis.xadd(
@@ -95,28 +67,9 @@ const openingPrice =
       return;
     }
 
-    /*
-      STEP 4
-      Balance validation
+    const realBalance = usdtAsset.balance / Math.pow( 10, usdtAsset.decimals);
 
-      Asset balance stored in scaled int
-
-      Example:
-      balance = 500000
-      decimals = 2
-
-      real balance = 5000
-    */
-    const realBalance =
-      usdtAsset.balance /
-      Math.pow(
-        10,
-        usdtAsset.decimals
-      );
-
-    if (
-      realBalance < requiredMargin
-    ) {
+    if ( realBalance < requiredMargin ) {
       await redis.xadd(
         CALLBACK_QUEUE,
         "*",
@@ -129,51 +82,23 @@ const openingPrice =
       return;
     }
 
-    /*
-      STEP 5
-      Transaction callback style
-
-      Better for real engines
-    */
-   console.log(
-  "BEFORE TRANSACTION:",
-  orderId
-);
-    await prisma.$transaction(
-      async (tx) => {
-        /*
-          Create Order
-        */
+   console.log("BEFORE TRANSACTION:", orderId );
+    await prisma.$transaction(async (tx) => {
         await tx.order.create({
           data: {
             id: orderId,
             userId,
-
             symbol,
             side,
-
-            qty: Math.floor(
-              qty * 100000000
-            ),
+            qty: Math.floor(qty * 100000000),
             qtyDecimals: 8,
-
             leverage,
-
-            openingPrice:
-              openingPrice * 10000,
-            priceDecimals: 4,
-
-            margin: Math.floor(
-              requiredMargin * 100
-            ),
-
+            openingPrice: openingPrice * 10000, priceDecimals: 4,
+            margin: Math.floor(requiredMargin * 100),
             status: "open",
           },
         });
         
-        /*
-          Deduct margin
-        */
         await tx.asset.update({
           where: {
             id: usdtAsset.id,
@@ -181,29 +106,15 @@ const openingPrice =
           data: {
             balance: {
               decrement:
-                Math.floor(
-                  requiredMargin *
-                    Math.pow(
-                      10,
-                      usdtAsset.decimals
-                    )
-                ),
+                Math.floor(requiredMargin * Math.pow( 10, usdtAsset.decimals)),
             },
           },
         });
       }
     );
-console.log(
-  "ASSET UPDATED:",
-  orderId
-);
-    /*
-      STEP 6
-      Success callback
-    */console.log(
-  "SENDING CREATED CALLBACK:",
-  orderId
-);
+  console.log("ASSET UPDATED:", orderId);
+
+  console.log("SENDING CREATED CALLBACK:",orderId);
     await redis.xadd(
       CALLBACK_QUEUE,
       "*",
@@ -213,19 +124,10 @@ console.log(
       "created"
     );
 
-    console.log(
-      "Order created:",
-      orderId
-    );
+    console.log("Order created:", orderId);
   } catch (error) {
-    console.error(
-      "Create order engine error:",
-      error
-    );
+    console.error("Create order engine error:", error);
 
-    /*
-      Failure callback
-    */
     await redis.xadd(
       CALLBACK_QUEUE,
       "*",

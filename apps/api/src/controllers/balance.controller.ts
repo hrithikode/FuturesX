@@ -37,6 +37,7 @@ export const getBalance = async (req: Request, res: Response
       symbol: balance.symbol,
       availableBalance: balance.balance / Math.pow(10, balance.decimals)
     });
+    
   } catch (error) {
     console.error(
       "Get balance error:",

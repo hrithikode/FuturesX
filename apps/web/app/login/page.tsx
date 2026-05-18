@@ -52,25 +52,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-12">
+    <div className="min-h-screen">
 
-      <div className="col-span-7 border-r flex flex-col justify-between p-10">
+      <div className=" flex flex-col justify-between p-10">
 
         <div>
           <h1 className="text-2xl font-bold">
             PerpX
           </h1>
         </div>
-
-        <div className="max-w-xl space-y-6">
-          <h2 className="text-5xl font-bold leading-tight">
-            Trade Perpetuals Without Limits
-          </h2>
-
-          
-        </div>
-
-        
       </div>
 
   
@@ -90,7 +80,7 @@ export default function LoginPage() {
 
           <div className="space-y-4 border rounded-xl p-6">
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <p className="text-sm">
                 Email
               </p>
@@ -103,7 +93,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <p className="text-sm">
                 Password
               </p>
@@ -117,7 +107,7 @@ export default function LoginPage() {
             </div>
 
             <Button
-              className="w-full cursor-pointer"
+              className="w-full"
               size="lg"
               onClick={handleLogin}
               disabled={loading}

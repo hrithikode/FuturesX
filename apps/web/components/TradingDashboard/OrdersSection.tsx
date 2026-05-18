@@ -1,55 +1,37 @@
 "use client";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-
 import { Table, TableBody, TableCell,TableHead, TableHeader, TableRow} from "@/components/ui/table";
-
 import { Button } from "@/components/ui/button";
+import { Order } from "@/types/order";
+import { formatDistanceToNow } from "date-fns"
 
-type Order = {
-  id: string;
-  symbol: string;
-  side: "long" | "short";
-  leverage: number;
-  qty: number;
-  status: "open" | "closed";
-  pnl?: number | null;
-  closedAt?: string | null;
-};
 
 type Props = {
   openOrders: Order[];
   closedOrders: Order[];
   handleCloseOrder: ( orderId: string) => Promise<void>;
-  message: string;
-  isLoading: boolean;
+  loadingOrderId: string | null;
 };
+
 export default function OrdersSection({
   openOrders,
   closedOrders,
   handleCloseOrder,
-  message,
-  isLoading,
+  loadingOrderId
 }: Props) {
-
 
   return (
     <div className="w-full h-full border-t p-4">
 
-      {message && (
-        <p className="mb-4 text-sm">
-          {message}
-        </p>
-      )}
-
       <Tabs defaultValue="open">
 
         <TabsList>
-          <TabsTrigger value="open">
+          <TabsTrigger value="open" className="cursor-pointer">
             Open Orders
           </TabsTrigger>
 
-          <TabsTrigger value="closed">
+          <TabsTrigger value="closed" className="cursor-pointer">
             Closed Orders
           </TabsTrigger>
         </TabsList>
@@ -64,6 +46,8 @@ export default function OrdersSection({
                 <TableHead>Quantity</TableHead>
                 <TableHead>Leverage</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Margin</TableHead>
+                <TableHead>Opening Price</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -99,15 +83,19 @@ export default function OrdersSection({
                     </TableCell>
 
                     <TableCell>
+                      ${(order.margin).toLocaleString("en-US")}
+                    </TableCell>
+
+                    <TableCell>
+                      ${(order.openingPrice).toLocaleString("en-US")}
+                    </TableCell>
+
+                    <TableCell>
                       <Button
                         className="cursor-pointer"
                         size="sm"
-                        onClick={() =>
-                          handleCloseOrder(
-                            order.id
-                          )
-                        }
-                        disabled={isLoading}
+                        onClick={() =>handleCloseOrder(order.id)}
+                        disabled={loadingOrderId === order.id}
                       >
                         Close
                       </Button>
@@ -128,6 +116,8 @@ export default function OrdersSection({
                 <TableHead>Quantity</TableHead>
                 <TableHead>Leverage</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Margin</TableHead>
+                <TableHead>Opening Price</TableHead>
                 <TableHead>Final PnL</TableHead>
                 <TableHead>Closed At</TableHead>
 
@@ -165,11 +155,23 @@ export default function OrdersSection({
                     </TableCell>
 
                     <TableCell>
-                      {order.pnl ?? "--"}
+                      ${(order.margin).toLocaleString("en-US")}
                     </TableCell>
 
                     <TableCell>
-                      {order.closedAt ?? "--"}
+                      ${(order.openingPrice).toLocaleString("en-US")}
+                    </TableCell>
+
+                    <TableCell>
+                      ${(order.pnl)?.toLocaleString("en-US") ?? "--"}
+                    </TableCell>
+
+                    <TableCell>
+                      {order.closedAt 
+                        ? formatDistanceToNow(
+                            new Date(order.closedAt), 
+                            { addSuffix: true }
+                          ) : "-"}
                     </TableCell>
                   </TableRow>
                 ))

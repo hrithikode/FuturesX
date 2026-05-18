@@ -9,7 +9,6 @@ datasource db {
 
 model User {
   id       String  @id @default(uuid()) @db.Uuid()
-  name     String
   email    String  @unique
   password String
   Asset    Asset[]
@@ -28,21 +27,22 @@ model Asset {
 }
 
 model Order {
-  id            String      @id @default(uuid()) @db.Uuid
-  userId        String      @db.Uuid
-  side          Side
-  symbol        Symbol
-  qty           Int
-  qtyDecimals   Int         @default(8)
-  openingPrice  Int
-  priceDecimals Int         @default(4)
-  margin        Int
-  pnl           Int?
-  status        OrderStatus
-  leverage      Int         @default(1)
-  createdAt     DateTime    @default(now())
-  closedAt      DateTime?
-  User          User        @relation(fields: [userId], references: [id])
+  id              String      @id @default(uuid()) @db.Uuid
+  userId          String      @db.Uuid
+  side            Side
+  symbol          Symbol
+  qty             Int
+  qtyDecimals     Int         @default(8)
+  openingPrice    Int
+  priceDecimals   Int         @default(4)
+  margin          Int
+  pnl             Int?
+  finalSettlement Int?
+  status          OrderStatus
+  leverage        Int         @default(1)
+  createdAt       DateTime    @default(now())
+  closedAt        DateTime?
+  User            User        @relation(fields: [userId], references: [id])
 }
 
 enum Symbol {

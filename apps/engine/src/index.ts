@@ -1,7 +1,8 @@
 import { redis } from "@repo/redis";
 import { createOrder } from "./handlers/createOrder.js";
 import { closeOrder } from "./handlers/closeOrder.js";
-import "./poller.js"
+
+
 const ENGINE_STREAM = "engine-stream";
 
 const engineRedis = redis.duplicate();

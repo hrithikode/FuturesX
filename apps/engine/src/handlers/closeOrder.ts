@@ -30,33 +30,38 @@ export async function closeOrder( payload: CloseOrderPayload) {
       return;
     }
 
-  const livePrice = await redis.get(
-    `price:${existingOrder.symbol}`
-  );
-
-  if (!livePrice) {
-    await redis.xadd(
-      CALLBACK_QUEUE,
-      "*",
-      "id",
-      orderId,
-      "status",
-      "no_price"
+    const livePrice = await redis.get(
+      `price:${existingOrder.symbol}`
     );
-    return;
-  }
 
-  const closingPrice = Number(livePrice);
+    if (!livePrice) {
+      await redis.xadd(
+        CALLBACK_QUEUE,
+        "*",
+        "id",
+        orderId,
+        "status",
+        "no_price"
+      );
+      return;
+    }
 
-  const qty = existingOrder.qty / Math.pow( 10, existingOrder.qtyDecimals);
+    const parsedPrice = JSON.parse(livePrice);
 
-  const openingPrice = existingOrder.openingPrice / Math.pow( 10, existingOrder.priceDecimals);
-  
-  console.log("opening peice", openingPrice)
-  
-  const margin = existingOrder.margin / 100;
+    const closingPrice =
+      existingOrder.side === "long"
+        ? parsedPrice.bid
+        : parsedPrice.ask;
 
-  let pnl = 0;
+    const qty = existingOrder.qty / Math.pow(10, existingOrder.qtyDecimals);
+
+    const openingPrice = existingOrder.openingPrice / Math.pow(10, existingOrder.priceDecimals);
+    
+    console.log("opening peice", openingPrice)
+    
+    const margin = existingOrder.margin / 100;
+
+    let pnl = 0;
 
     if (existingOrder.side === "long") {
       pnl = (closingPrice - openingPrice) * qty;
@@ -79,7 +84,8 @@ export async function closeOrder( payload: CloseOrderPayload) {
           data: {
             status: "closed",
             closedAt: new Date(),
-            pnl: Math.floor(pnl * 100 )
+            pnl: Math.floor(pnl * 100 ),
+            finalSettlement: Math.floor(finalSettlement * 100)
           }
         });
 
@@ -93,9 +99,7 @@ export async function closeOrder( payload: CloseOrderPayload) {
           data: {
             balance: {
               increment:
-                Math.floor(
-                  finalSettlement * 100
-                )
+                Math.floor(finalSettlement * 100)
             }
           }
         });
@@ -108,11 +112,7 @@ export async function closeOrder( payload: CloseOrderPayload) {
       "id",
       orderId,
       "status",
-      "closed",
-      "pnl",
-      String(pnl),
-      "settlement",
-      String(finalSettlement)
+      "closed"
     );
   } catch (error) {
     console.error( "Close order engine error:", error);

@@ -49,14 +49,19 @@ export async function createOrder( payload: CreateOrderPayload) {
     return;
   }
 
-  const openingPrice = Number(price);
+  const parsedPrice = JSON.parse(price);
+
+  const openingPrice =
+    side === "long"
+      ? parsedPrice.ask
+      : parsedPrice.bid;
 
   const requiredMargin = (openingPrice * qty) / leverage;
 
-    const usdtAsset = balanceSnapshot;
+  const usdtAsset = balanceSnapshot;
 
-    if (!usdtAsset) {
-      await redis.xadd(
+  if (!usdtAsset) {
+    await redis.xadd(
         CALLBACK_QUEUE,
         "*",
         "id",
@@ -64,12 +69,12 @@ export async function createOrder( payload: CreateOrderPayload) {
         "status",
         "wallet_not_found"
       );
-      return;
-    }
+    return;
+  }
 
-    const realBalance = usdtAsset.balance / Math.pow( 10, usdtAsset.decimals);
+  const realBalance = usdtAsset.balance / Math.pow( 10, usdtAsset.decimals);
 
-    if ( realBalance < requiredMargin ) {
+    if (realBalance < requiredMargin) {
       await redis.xadd(
         CALLBACK_QUEUE,
         "*",
@@ -78,11 +83,10 @@ export async function createOrder( payload: CreateOrderPayload) {
         "status",
         "insufficient_balance"
       );
-
       return;
     }
 
-   console.log("BEFORE TRANSACTION:", orderId );
+   console.log("before transaction", orderId );
     await prisma.$transaction(async (tx) => {
         await tx.order.create({
           data: {
@@ -93,7 +97,8 @@ export async function createOrder( payload: CreateOrderPayload) {
             qty: Math.floor(qty * 100000000),
             qtyDecimals: 8,
             leverage,
-            openingPrice: openingPrice * 10000, priceDecimals: 4,
+            openingPrice: openingPrice * 10000,
+            priceDecimals: 4,
             margin: Math.floor(requiredMargin * 100),
             status: "open",
           },
@@ -106,15 +111,14 @@ export async function createOrder( payload: CreateOrderPayload) {
           data: {
             balance: {
               decrement:
-                Math.floor(requiredMargin * Math.pow( 10, usdtAsset.decimals)),
+                Math.floor(requiredMargin * Math.pow(10, usdtAsset.decimals)),
             },
           },
         });
       }
     );
-  console.log("ASSET UPDATED:", orderId);
+  console.log("asset updated0", orderId);
 
-  console.log("SENDING CREATED CALLBACK:",orderId);
     await redis.xadd(
       CALLBACK_QUEUE,
       "*",
@@ -124,9 +128,9 @@ export async function createOrder( payload: CreateOrderPayload) {
       "created"
     );
 
-    console.log("Order created:", orderId);
+    console.log("Order created", orderId);
   } catch (error) {
-    console.error("Create order engine error:", error);
+    console.error("create order engine error:", error);
 
     await redis.xadd(
       CALLBACK_QUEUE,

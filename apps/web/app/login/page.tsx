@@ -2,100 +2,143 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import api from "../lib/axios";
-import axios from "axios";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { loginUser } from "@/lib/api";
+import { toast } from "sonner";
+import Link from "next/link";
 
 export default function LoginPage() {
+
   const router = useRouter();
-
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
-    e.preventDefault();
-
+  const handleLogin = async () => {
     try {
       setLoading(true);
 
-      await api.post(
-        "/api/auth/login",
-        formData,
-        {
-          withCredentials: true,
-        }
-      );
+      if(!email.trim()) {
+        toast.error("Email is required");
+        return;
+      }
 
-      alert("Login successful");
+      if(!/\S+@\S+\.\S+/.test(email)) {
+      toast.error("Enter a valid email");
+      return;
+      }
+
+      if(!password.trim()) {
+        toast.error("Password is required");
+        return;
+      }
+
+      if(password.length < 6) {
+        toast.error("Wrong password");
+        return;
+      }
+
+      await loginUser({email, password});
 
       router.push("/dashboard");
-    } catch (error: unknown) {
+
+    } catch (error) {
       console.error(error);
-
-      const message = axios.isAxiosError(error)
-        ? error?.response?.data?.message
-        : undefined;
-
-      alert(message || "Login failed");
+      toast.error("login failed")
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-5"
-      >
-        <h1 className="text-3xl font-bold">
-          Login
-        </h1>
+    <div className="min-h-screen grid grid-cols-12">
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-zinc-800 border border-zinc-700 outline-none"
-          required
-        />
+      <div className="col-span-7 border-r flex flex-col justify-between p-10">
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-zinc-800 border border-zinc-700 outline-none"
-          required
-        />
+        <div>
+          <h1 className="text-2xl font-bold">
+            PerpX
+          </h1>
+        </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-white text-black font-bold p-3 rounded-xl"
-        >
-          {loading
-            ? "Logging In..."
-            : "Login"}
-        </button>
-      </form>
+        <div className="max-w-xl space-y-6">
+          <h2 className="text-5xl font-bold leading-tight">
+            Trade Perpetuals Without Limits
+          </h2>
+
+          
+        </div>
+
+        
+      </div>
+
+  
+      <div className="col-span-5 flex items-center justify-center p-10">
+
+        <div className="w-full max-w-md space-y-6">
+
+          <div className="space-y-2">
+            <h2 className="text-3xl font-semibold">
+              Sign in to PerpX
+            </h2>
+
+            <p className="text-sm text-muted-foreground">
+              Continue where you left off.
+            </p>
+          </div>
+
+          <div className="space-y-4 border rounded-xl p-6">
+
+            <div className="space-y-2">
+              <p className="text-sm">
+                Email
+              </p>
+
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm">
+                Password
+              </p>
+
+              <Input
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <Button
+              className="w-full cursor-pointer"
+              size="lg"
+              onClick={handleLogin}
+              disabled={loading}
+            >
+              {loading
+                ? "Signing In..." : "SIGN IN"}
+            </Button>
+
+          </div>
+
+          <p className="text-sm text-center">
+            New here? {" "}
+            <Link
+              href='/register'
+              className="underline hover:text-muted-foreground"
+            >Create Account
+          </Link>
+          </p>
+
+        </div>
+      </div>
     </div>
   );
 }

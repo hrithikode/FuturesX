@@ -1,142 +1,50 @@
-"use client";
+"use client"
 
-import React, {
-  useState,
-  useEffect
-} from "react";
+import { useRouter } from "next/navigation";
 
-import Header from "./components/Header";
-import TradeForm from "./components/TradeForm";
-import OpenOrders from "./components/OpenOrders";
-import OrderHistory from "./components/OrderHistory";
-import BalanceCard from "./components/BalanceCard";
-import StatusMessage from "./components/StatusMessage";
+export default function LandingPage() {
 
-import useLivePrice from "./hooks/useLivePrice";
-import useBalance from "./hooks/useBalance";
-import useOrders from "./hooks/useOrders";
-
-export default function Home() {
-  /*
-    Live BTC price from WebSocket
-  */
-  const { btcPrice } =
-    useLivePrice();
-
-  /*
-    User balance
-  */
-  const {
-    balance,
-    fetchBalance
-  } = useBalance();
-
-  /*
-    Trade form state
-  */
-  const [quantity, setQuantity] =
-    useState("");
-
-  const [leverage, setLeverage] =
-    useState(1);
-
-  /*
-    UI message state
-  */
-  const [message, setMessage] =
-    useState("");
-
-  /*
-    Loading state
-  */
-  const [isLoading, setIsLoading] =
-    useState(false);
-
-  /*
-    Orders hook
-  */
-  const {
-    openOrders,
-    closedOrders,
-    handleCreateOrder,
-    handleCloseOrder
-  } = useOrders(
-    fetchBalance,
-    setMessage,
-    setIsLoading
-  );
-
-  /*
-    Estimated margin preview
-  */
-  const estimatedMargin =
-    quantity && leverage
-      ? (
-          (Number(quantity) *
-            btcPrice) /
-          leverage
-        ).toFixed(2)
-      : "0";
-
-  /*
-    Auto-clear message
-  */
-  useEffect(() => {
-    if (!message) return;
-
-    const timer =
-      setTimeout(() => {
-        setMessage("");
-      }, 3000);
-
-    return () =>
-      clearTimeout(timer);
-  }, [message]);
+  const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6">
+    <div className="min-h-screen bg-white text-black">
+      <header className="border-b">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <h1 className="text-2xl font-bold tracking-tight">PerpX</h1>
 
-        <Header
-          btcPrice={btcPrice}
-        />
+          <button 
+            className="rounded-xl bg-black px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 cursor-pointer"
+            onClick={() => router.push("/register")}>
+            Get Started
+          </button>
+        </div>
+      </header>
 
-        <BalanceCard
-          balance={balance}
-        />
+      <main className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 py-20 md:grid-cols-2">
+        <div className="space-y-8">
+          <p className="inline-block rounded-full border px-4 py-2 text-sm font-medium text-gray-600">
+            Trade Smarter, Faster
+          </p>
 
-        <StatusMessage
-          message={message}
-        />
+          <h2 className="text-5xl font-bold leading-tight md:text-6xl">
+            Next-Gen Crypto <br /> Trading Platform
+          </h2>
 
-        <TradeForm
-          quantity={quantity}
-          setQuantity={setQuantity}
-          leverage={leverage}
-          setLeverage={setLeverage}
-          estimatedMargin={
-            estimatedMargin
-          }
-          handleCreateOrder={
-            handleCreateOrder
-          }
-          isLoading={isLoading}
-        />
+          <p className="max-w-xl text-lg text-gray-600">
+            Trade cryptocurrencies with real-time market data
+            and powerful perpetual trading tools.
+          </p>
 
-        <OpenOrders
-          openOrders={openOrders}
-          handleCloseOrder={
-            handleCloseOrder
-          }
-          isLoading={isLoading}
-        />
-
-        <OrderHistory
-          closedOrders={
-            closedOrders
-          }
-        />
-      </div>
+          <div className="flex gap-4">
+            <button 
+              className="rounded-2xl bg-black px-8 py-4 text-base font-semibold text-white transition hover:opacity-90 cursor-pointer"
+              onClick={() => router.push("/register")}
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,330 +1,60 @@
-/*"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import api from "../lib/axios";
-import axios from "axios";
-
-type Order = {
-  id: string;
-  symbol: string;
-  side: "long" | "short";
-  leverage: number;
-  qty: number;
-  qtyDecimals: number;
-
-  status: "open" | "closed";
-  pnl?: number | null;
-  closedAt?: string | null;
-};
-
-export default function Dashboard() {
-  const [quantity, setQuantity] = useState("");
-  const [leverage, setLeverage] = useState(1);
-  const [balance, setBalance] = useState(0);
-  const [openOrders, setOpenOrders] =
-  useState<Order[]>([]);
-
-const [closedOrders, setClosedOrders] =
-  useState<Order[]>([]);
-const [btcPrice, setBtcPrice] =
-  useState(0);
-
-    const fetchBalance = async () => {
-  try {
-    const response =
-      await api.get("/balance");
-
-    setBalance(
-      response.data.availableBalance
-    );
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-    const fetchOrders = async () => {
-    try {
-        const response =
-        await api.get(
-            "/trade/orders"
-        );
-
-        setOpenOrders(
-        response.data.openOrders
-        );
-        setClosedOrders(
-          response.data.closedOrders
-        )
-    } catch (error) {
-        console.error(error);
-    }
-};
-
-useEffect(() => {
-  fetchOrders();
-  fetchBalance();
-
-  const ws =
-    new WebSocket(
-      "ws://localhost:8080"
-    );
-
-  ws.onmessage = (
-    events
-  ) => {
-    const data =
-      JSON.parse(
-        events.data
-      );
-
-    setBtcPrice(
-      Number(data.price)
-    );
-  };
-
-  return () => {
-    ws.close();
-  };
-}, []);
-
-const handleCloseOrder = async (
-  orderId: string
-) => {
-  try {
-    await api.post(
-      `/trade/close/${orderId}`
-    );
-
-    alert("Order closed");
-
-    await fetchOrders();
-    await fetchBalance();
-  } catch (error) {
-    console.error(error);
-    alert("Close order failed");
-  }
-};
-
-  // estimated margin for frontend preview
-  const estimatedMargin =
-    quantity && leverage
-      ? (
-          (Number(quantity) * btcPrice) /
-          leverage
-        ).toFixed(2)
-      : "0";
+import Header from "@/components/TradingDashboard/Header";
+import LeftSidebar from "@/components/TradingDashboard/LeftSidebar";
+import OrdersSection from "@/components/TradingDashboard/OrdersSection";
+import GraphSection from "@/components/TradingDashboard/GraphSection";
+import RightOrderSection from "@/components/TradingDashboard/RightOrderSection";
+import useBalance from "@/hooks/useBalance";
+import useOrders from "@/hooks/useOrders";
+import { useState } from "react";
 
 
-    const handleCreateOrder = async (
-        side: "long" | "short"
-        ) => {
-            
-        try {
-            await api.post(
-            "/trade/create",
-            {
-                symbol: "BTCUSDT",
-                side,
-                qty: Number(quantity),
-                leverage,
-            },
-            );
+export default function DashboardPage() {
+  const [createOrderLoading, setCreateOrderLoading] = useState(false);
+  const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null)
+  const { balance, fetchBalance } = useBalance();
+  const { openOrders, closedOrders, handleCreateOrder, handleCloseOrder} = useOrders(fetchBalance, setCreateOrderLoading, setLoadingOrderId);
 
-            alert("Order created");
-            await fetchOrders();
-            await fetchBalance();
-        } catch (error: unknown) {
-            if (axios.isAxiosError(error)) {
-                console.error(error);
-                console.error("FULL ERROR:", error);
-                console.log("Response:", error.response);
-            } else {
-                console.error(error);
-            }
-
-            alert("Order failed");
-        }
-    };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-6">
-        
-        <p className="text-sm text-green-400 mt-2">
-            Available Balance: ${balance}
-        </p>
-        <div>
-          <h1 className="text-3xl font-bold">
-            BTC-USDT
-          </h1>
+    <div className="h-screen flex flex-col">
 
-          <p className="text-zinc-400 mt-1">
-            Live Price: ${btcPrice}
-          </p>
+      <Header
+        balance={balance}
+      />
 
-          <p className="text-sm text-zinc-500 mt-2">
-            Estimated margin shown here.
-            Final margin is validated by backend.
-          </p>
+      <div className="flex-1 grid grid-cols-12">
+
+        <div className="col-span-2 border-r">
+          <LeftSidebar/>
         </div>
 
-       
-        <div className="space-y-2">
-          <label className="text-sm text-zinc-400">
-            Quantity (BTC)
-          </label>
+        <div className="col-span-7 flex flex-col">
+          <div className="h-[55%] border-b">
+            <GraphSection />
+          </div>
 
-          <input
-            type="number"
-            placeholder="0.01"
-            value={quantity}
-            onChange={(e) =>
-              setQuantity(e.target.value)
-            }
-            className="w-full p-3 rounded-lg bg-zinc-800 border border-zinc-700 outline-none"
+          <div className="h-[45%] overflow-y-auto">
+            <OrdersSection
+              openOrders={openOrders}
+              closedOrders={closedOrders}
+              handleCloseOrder={handleCloseOrder}
+              loadingOrderId={loadingOrderId}
+            />
+          </div>
+        </div>
+
+        <div className="col-span-3 border-l">
+          <RightOrderSection
+            handleCreateOrder={handleCreateOrder}
+            createOrderLoading={createOrderLoading}
           />
         </div>
 
-        
-        <div className="space-y-2">
-          <label className="text-sm text-zinc-400">
-            Leverage
-          </label>
-
-          <select
-            value={leverage}
-            onChange={(e) =>
-              setLeverage(
-                Number(e.target.value)
-              )
-            }
-            className="w-full p-3 rounded-lg bg-zinc-800 border border-zinc-700 outline-none"
-          >
-            {[1, 2, 5, 10].map((value) => (
-              <option
-                key={value}
-                value={value}
-              >
-                {value}x
-              </option>
-            ))}
-          </select>
-        </div>
-
-     
-        <div className="bg-zinc-800 rounded-xl p-4">
-          <p className="text-zinc-400 text-sm">
-            Estimated Required Margin
-          </p>
-
-          <h2 className="text-3xl font-bold mt-2">
-            ${estimatedMargin}
-          </h2>
-        </div>
-
-       
-        <div className="grid grid-cols-2 gap-4">
-          <button onClick={() => handleCreateOrder("long")} className="bg-green-500 text-black font-bold p-3 rounded-xl">
-            Long
-          </button>
-
-          <button onClick={() => handleCreateOrder("short")} className="bg-red-500 text-white font-bold p-3 rounded-xl">
-            Short
-          </button>
-        </div>
-
-       <div className="space-y-3">
-  <h2 className="text-xl font-semibold">
-    Open Orders
-  </h2>
-
-  {openOrders.map((order) => (
-    <div
-      key={order.id}
-      className="bg-zinc-800 rounded-xl p-4 flex items-center justify-between"
-    >
-      <div>
-        <p
-          className={`font-semibold ${
-            order.side === "long"
-              ? "text-green-500"
-              : "text-red-500"
-          }`}
-        >
-          {String(order.side).toUpperCase()}
-        </p>
-
-        <p className="text-sm text-zinc-400">
-          {order.symbol} •{" "}
-          {order.qty /
-            Math.pow(
-              10,
-              order.qtyDecimals
-            )} BTC
-        </p>
       </div>
 
-      <div className="text-right space-y-2">
-  <p className="font-bold">
-    {order.leverage}x
-  </p>
 
-  <p className="text-sm text-zinc-400">
-    Leverage
-  </p>
-
-  <button
-    onClick={() =>
-      handleCloseOrder(order.id)
-    }
-    className="bg-red-500 text-white px-4 py-1 rounded-lg text-sm font-semibold"
-  >
-    Close
-  </button>
-</div>
-    </div>
-  ))}
-</div>
-
-<div className="mt-8 space-y-4">
-  <h2 className="text-xl font-semibold">
-    Order History
-  </h2>
-
-  {closedOrders.map((order) => (
-    <div
-      key={order.id}
-      className="bg-zinc-800 rounded-xl p-4 flex items-center justify-between"
-    >
-      <div>
-        <p
-          className={`font-semibold ${
-            order.side === "long"
-              ? "text-green-500"
-              : "text-red-500"
-          }`}
-        >
-          {String(order.side).toUpperCase()}
-        </p>
-
-        <p className="text-sm text-zinc-400">
-          {order.symbol}
-        </p>
-      </div>
-
-      <div className="text-right">
-        <p className="font-bold">
-          PnL: {(order.pnl || 0) / 100} USDT
-        </p>
-
-        <p className="text-sm text-zinc-400">
-          Closed
-        </p>
-      </div>
-    </div>
-  ))}
-</div>
-      </div>
     </div>
   );
-}*/
+}

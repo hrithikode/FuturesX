@@ -3,7 +3,7 @@ import { CloseOrderBodySchema, CreateOrderBodySchema } from "../schema/trade.typ
 import { Request, Response, } from "express";
 import { prisma } from "@repo/prisma";
 import { redis } from "@repo/redis";
-import { subscriber } from "../subscriber.js";
+import { listener } from "../listener.js";
 
 async function getBalance(userId: string) {
     const userBalance = await prisma.asset.findUnique({
@@ -35,8 +35,7 @@ const addtoStream = async ( request:any) => {
 
 async function sendRequestAndWait(orderId: string, request:any ) {
     try{
-        const waitPromise =
-        subscriber.waitForMessage(orderId);
+        const waitPromise = listener.waitForMessage(orderId);
 
         await addtoStream(request);
 
@@ -205,7 +204,7 @@ export const closeOrder = async (req: Request, res: Response) => {
       message:
         "Order closed successfully",
           pnl: callback.pnl,
-          settlement: callback.settlement
+          settlement: callback.finalSettlement
     });
   } catch (error) {
     console.error("Close order error:", error);
@@ -246,13 +245,41 @@ export const getOrders = async (req: Request , res:Response ) => {
             openingPrice: true,
             priceDecimals: true,
             margin: true,
-            createdAt: true
+            finalSettlement: true,
+            createdAt: true,
+            closedAt: true
         }
       });
 
-    const openOrders = orders.filter((order) => order.status === "open");
+    const openOrders = orders
+      .filter((order) => order.status === "open")
+      .map((order) => ({
+        id: order.id,
+        symbol: order.symbol,
+        side: order.side,
+        leverage: order.leverage,
+        qty: order.qty / Math.pow(10, order.qtyDecimals),
+        status: order.status,
+        margin: order.margin / 100,
+        openingPrice: order.openingPrice / Math.pow(10, order.priceDecimals),
+        createdAt: order.createdAt
+      }))
 
-    const closedOrders = orders.filter((order) => order.status === "closed");
+    const closedOrders = orders
+      .filter((order) => order.status === "closed")
+      .map((order) => ({
+        id: order.id,
+        symbol: order.symbol,
+        side: order.side,
+        leverage: order.leverage,
+        qty: order.qty / Math.pow(10, order.qtyDecimals),
+        status: order.status,
+        pnl: order.pnl !==null ? order.pnl / 100 : 0,
+        margin: order.margin / 100,
+        openingPrice: order.openingPrice / Math.pow(10, order.priceDecimals),
+        finalSettlement: order.finalSettlement !==null ? order.finalSettlement / 100 : 0,
+        closedAt: order.closedAt
+      }))
 
     return res.json({
       openOrders,

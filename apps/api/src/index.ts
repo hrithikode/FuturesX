@@ -3,15 +3,17 @@ dotenv.config();
 
 
 import express from "express";
+import http from "http";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import cookieParser from 'cookie-parser';
 import balanceRouter from './routes/balance.routes.js'
 import errorHandler from './middleware/error.middleware.js';
 import tradeRouter from './routes/trade.routes.js';
-import "./ws.js";
+import { startWebSocketServer } from "./ws.js";
 
 const app = express();
+const server = http.createServer(app);
 
 app.use(cors({
   origin: "http://localhost:3000",
@@ -28,6 +30,10 @@ app.use('/trade', tradeRouter);
 
 app.use(errorHandler);
 
-app.listen(4000, () => {
+startWebSocketServer(server).catch((error) => {
+  console.error("Failed to start WebSocket server:", error);
+});
+
+server.listen(4000, () => {
   console.log("server is running on port 4000");
 });

@@ -13,9 +13,9 @@ export const register = async (req: Request, res: Response) => {
             });
         }
         
-        const { name, email, password } = user.data;
+        const { email, password } = user.data;
 
-        if (!name || !email || !password) {
+        if ( !email || !password) {
             return res.status(400).json({
                 error: "credentials are required",
             });
@@ -33,14 +33,13 @@ export const register = async (req: Request, res: Response) => {
 
         const newUser = await prisma.user.create({
             data: {
-                name,
                 email, 
                 password:hashedPassword,
 
                 Asset: {
                     create: {
                         symbol: "USDT",
-                        balance: 500000,
+                        balance: 1000000,
                         decimals: 2
                     }
                 }
@@ -61,7 +60,6 @@ export const register = async (req: Request, res: Response) => {
             user: {
                 id: newUser.id,
                 email: newUser.email,
-                name: newUser.name
             }
         })
 
@@ -116,8 +114,7 @@ export const login = async (req: Request, res: Response) => {
             message: "User logged In successfully",
             user: { 
                 id: loginUser.id,
-                email: loginUser.email,
-                name: loginUser.name
+                email: loginUser.email
             }
         })
     } catch (error) {

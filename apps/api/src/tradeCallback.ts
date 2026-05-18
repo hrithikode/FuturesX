@@ -2,7 +2,7 @@ import { redis } from "@repo/redis"
 
 export const CALLBACK_QUEUE = "callback-queue";
 
-export class RedisSubscriber {
+export class RedisListener {
   private client
   private callbacks: Record<string, (data: Record<string, string>) => void>;
 
@@ -66,7 +66,7 @@ export class RedisSubscriber {
           delete this.callbacks[callbackId];
           reject(new Error("Timeout waiting for message"));
         }
-      }, 5000);
+      }, 10000);
 
       this.callbacks[callbackId] = (data: Record<string, string>) => {
         clearTimeout(timer);

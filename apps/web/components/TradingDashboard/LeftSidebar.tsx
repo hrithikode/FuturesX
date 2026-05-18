@@ -12,8 +12,8 @@ export default function LeftSidebar() {
         <Image 
           src="/bitcoin.png"
           alt="bitcoin"
-          width={40}
-          height={40}
+          width={30}
+          height={30}
         />
         <p className="ml-3 items-center justify-between">BTC-PERP</p>
       </h2>

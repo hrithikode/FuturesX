@@ -1,31 +1,52 @@
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import { redis } from "@repo/redis";
 
-const wss = new WebSocketServer({port: 8080});
+export async function startWebSocketServer(
+  server: any
+) {
+  const wss = new WebSocketServer({server});
 
-console.log("WebSocket server started");
+  const subscriber = redis.duplicate();
 
-wss.on("connection", (ws) => {
-    console.log( "Client connected");
+  wss.on("connection", async (socket) => {
+    console.log("Frontend connected");
 
-    const interval = setInterval( async () => {
-          const price = await redis.get(
-              "price:BTCUSDT"
-            );
+    const latestPrice = await redis.get(
+        "price:BTCUSDT"
+      );
 
-          ws.send( JSON.stringify({
-              symbol: "BTCUSDT",
-              price
-            })
-            );
-        }, 2000
-    );
-
-    ws.on( "close", () => {
-        clearInterval(interval);
-
-        console.log( "Client disconnected");
+    if (latestPrice) {
+      socket.send(latestPrice);
     }
-    );
+
+    socket.on("close", () => {
+      console.log(
+        "Frontend disconnected"
+      );
+    });
+  });
+
+  await subscriber.subscribe(
+    "channel:market:btcusdt"
+  );
+
+  subscriber.on(
+    "message",
+    (channel, message) => {
+      if (
+        channel ===
+        "channel:market:btcusdt"
+      ) {
+        wss.clients.forEach(
+          (client) => {
+            if (
+              client.readyState === WebSocket.OPEN
+            ) {
+              client.send(message);
+            }
+          }
+        );
+      }
+    }
+  );
 }
-);

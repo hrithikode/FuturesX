@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import useMarketPrice from "@/hooks/useMarketPrice";
+import { toast } from "sonner";
 
 
 type Props = {
@@ -14,16 +15,12 @@ type Props = {
     quantity: string,
     leverage: number
   ) => Promise<void>;
-  message: string;
-  setMessage: (value: string) => void;
-  isLoading: boolean;
+  createOrderLoading: boolean;
 };
 
 export default function RightOrderSection({
   handleCreateOrder,
-  message,
-  setMessage,
-  isLoading,
+  createOrderLoading,
 }: Props) {
   
   const [quantity, setQuantity] = useState("");
@@ -33,7 +30,7 @@ export default function RightOrderSection({
 
   const handlePlaceOrder = async () => {
     if (!quantity || Number(quantity) <= 0) {
-      setMessage("Please enter quantity");
+      toast.error("Please enter quantity");
       return;
     }
 
@@ -62,12 +59,6 @@ export default function RightOrderSection({
 
       <div className="p-4 space-y-6">
 
-        {message && (
-          <p className="border rounded-xl p-3 text-sm">
-            {message}
-          </p>
-        )}
-
         <Tabs
           defaultValue="long"
           value={positionType}
@@ -77,12 +68,12 @@ export default function RightOrderSection({
             )
           }
         >
-          <TabsList className="grid grid-cols-2 w-full h-12">
-            <TabsTrigger value="long" className="cursor-pointer ">
+          <TabsList className="grid grid-cols-2 w-full h-12 ">
+            <TabsTrigger value="long" className="cursor-pointer transsition-all duration-200 hover:text-emerald-600 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:font-semibold ">
               BUY / LONG
             </TabsTrigger>
 
-            <TabsTrigger value="short" className="cursor-pointer">
+            <TabsTrigger value="short" className="cursor-pointer transition-all duration-200 hover:text-rose-600 data-[state=active]:bg-rose-600 data-[state=active]:text-white data-[state=active]:font-semibold">
               SELL / SHORT
             </TabsTrigger>
           </TabsList>
@@ -90,24 +81,17 @@ export default function RightOrderSection({
 
     
         <div className=" rounded-lg p-4 space-y-4">
-          <h2 className="text-sm font-semibold">
-            Trade Setup
-          </h2>
-
           <div className="space-y-2">
             <p className="text-sm">
               Quantity
             </p>
 
             <Input
+              className="outline-none"
               type="number"
               placeholder="Enter quantity"
               value={quantity}
-              onChange={(e) =>
-                setQuantity(
-                  e.target.value
-                )
-              }
+              onChange={(e) => setQuantity(e.target.value)}
             />
           </div>
 
@@ -119,10 +103,7 @@ export default function RightOrderSection({
             <Select
               value={String(leverage)}
               onValueChange={(value) =>
-                setLeverage(
-                  Number(value)
-                )
-              }
+                setLeverage(Number(value))}
             >
               <SelectTrigger className="cursor-pointer">
                 <SelectValue placeholder="Select leverage" />
@@ -210,11 +191,11 @@ export default function RightOrderSection({
        
           <Button
             size="lg"
-            className="w-full cursor-pointer"
+            className="w-full cursor-pointer "
             onClick={handlePlaceOrder}
-            disabled={isLoading}
+            disabled={createOrderLoading}
           >
-            {isLoading
+            {createOrderLoading
               ? "Creating Order..."
               : `PLACE ${positionType.toUpperCase()} ORDER`}
           </Button>

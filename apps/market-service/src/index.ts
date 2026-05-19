@@ -39,11 +39,6 @@ ws.on("message", async (message) => {
       JSON.stringify(payload)
     );
 
-    console.log(
-      "Market Update:",
-      payload
-    );
-
   } catch (error) {
     console.error(
       "Market Service Error:",

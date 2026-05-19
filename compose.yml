@@ -17,5 +17,39 @@ services:
     ports:
       - "6379:6379"
 
+  backend:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: always
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - apps/api/.env.production
+
+  engine:
+    build:
+      context: .
+      dockerfile: apps/engine/Dockerfile
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - apps/engine/.env.production
+
+  market-worker:
+    build:
+      context: .
+      dockerfile: apps/market-service/Dockerfile
+    restart: always
+    depends_on:
+      - redis
+    env_file:
+      - apps/market-service/.env.production
+
 volumes:
   pgdata:

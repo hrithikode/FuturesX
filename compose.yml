@@ -17,7 +17,7 @@ services:
     ports:
       - "6379:6379"
 
-  backend:
+  api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -41,7 +41,7 @@ services:
     env_file:
       - apps/engine/.env.production
 
-  market-worker:
+  market-service:
     build:
       context: .
       dockerfile: apps/market-service/Dockerfile

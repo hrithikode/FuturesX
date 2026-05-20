@@ -1,5 +1,5 @@
 {
-  "name": "futuresx",
+  "name": "perpx",
   "private": true,
   "scripts": {
     "build": "turbo run build",
